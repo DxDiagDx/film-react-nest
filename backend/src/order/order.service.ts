@@ -1,5 +1,10 @@
 import { Injectable, Inject, BadRequestException } from '@nestjs/common';
-import { CreateOrderDto } from './dto/order.dto';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  CreateOrderDto,
+  OrderItemResponseDto,
+  OrderResponseDto,
+} from './dto/order.dto';
 import { IOrderRepository } from './../repository/order/order-repository.interface';
 import { IFilmsRepository } from 'src/repository/films/films-repository.interface';
 
@@ -12,9 +17,7 @@ export class OrderService {
     private readonly filmsRepository: IFilmsRepository,
   ) {}
 
-  async createOrder(
-    createOrderDto: CreateOrderDto,
-  ): Promise<{ success: boolean; message: string; order?: any }> {
+  async createOrder(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
     const { filmId, scheduleId, seats } = createOrderDto;
 
     // 1. Проверяем существование фильма
@@ -54,7 +57,27 @@ export class OrderService {
     );
 
     // 8. Создаем заказ
-    return this.orderRepository.create(createOrderDto, pricePerSeat);
+    const daytime = schedule.daytime;
+    const orderItems: OrderItemResponseDto[] = seats.map((seat) => {
+      const [row, seatNum] = seat.split(':').map(Number);
+
+      return {
+        film: filmId,
+        session: scheduleId,
+        daytime: daytime,
+        row: row,
+        seat: seatNum,
+        price: schedule.price,
+        id: `urn:uuid:${uuidv4()}`,
+      };
+    });
+
+    await this.orderRepository.create(createOrderDto, pricePerSeat);
+
+    return {
+      total: orderItems.length,
+      items: orderItems,
+    };
   }
 
   private validateSeatsFormat(seats: string[]): void {

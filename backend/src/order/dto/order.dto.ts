@@ -6,3 +6,18 @@ export class CreateOrderDto {
   userEmail: string;
   userName: string;
 }
+
+export class OrderItemResponseDto {
+  film: string;
+  session: string;
+  daytime: Date;
+  row: number;
+  seat: number;
+  price: number;
+  id: string;
+}
+
+export class OrderResponseDto {
+  total: number;
+  items: OrderItemResponseDto[];
+}
