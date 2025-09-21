@@ -11,10 +11,7 @@ export class MongoOrderRepository implements IOrderRepository {
     @InjectModel(Order.name) private readonly orderModel: Model<Order>,
   ) {}
 
-  async create(
-    orderData: CreateOrderDto,
-    pricePerSeat: number,
-  ): Promise<{ success: boolean; message: string; order?: any }> {
+  async create(orderData: CreateOrderDto, pricePerSeat: number): Promise<void> {
     const order = new this.orderModel({
       ...orderData,
       totalPrice: orderData.seats.length * pricePerSeat,
@@ -22,12 +19,6 @@ export class MongoOrderRepository implements IOrderRepository {
       createdAt: new Date(),
     });
 
-    const savedOrder = await order.save();
-
-    return {
-      success: true,
-      message: 'Места успешно забронированы',
-      order: savedOrder.toObject(),
-    };
+    await order.save();
   }
 }
