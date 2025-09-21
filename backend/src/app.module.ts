@@ -15,8 +15,6 @@ import { Film, FilmSchema } from './films/schemas/film.schema';
 import { MongoFilmsRepository } from './repository/films/mongo-films.repository';
 import { MongoOrderRepository } from './repository/order/mongo-order.repository';
 import { Order, OrderSchema } from './order/schemas/order.schema';
-import { InMemoryFilmsRepository } from './repository/films/in-memory-films.repository';
-import { InMemoryOrderRepository } from './repository/order/in-memory-order.repository';
 
 @Module({
   imports: [
