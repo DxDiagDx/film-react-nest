@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ServeStaticModule } from "@nestjs/serve-static";
-import { ConfigModule } from "@nestjs/config";
-import * as path from "node:path";
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { ConfigModule } from '@nestjs/config';
+import * as path from 'node:path';
 
-import { configProvider } from "./app.config.provider";
+import { configProvider } from './app.config.provider';
 import { FilmsController } from './films/films.controller';
 import { OrderController } from './order/order.controller';
 import { FilmsService } from './films/films.service';
@@ -20,9 +20,9 @@ import { InMemoryOrderRepository } from './repository/order/in-memory-order.repo
 
 @Module({
   imports: [
-	  ConfigModule.forRoot({
+    ConfigModule.forRoot({
       isGlobal: true,
-      cache: true
+      cache: true,
     }),
     // Подключаем MongoDB
     MongooseModule.forRootAsync({
@@ -33,7 +33,7 @@ import { InMemoryOrderRepository } from './repository/order/in-memory-order.repo
     // Регистрируем схему фильма
     MongooseModule.forFeature([
       { name: Film.name, schema: FilmSchema },
-      { name: Order.name, schema: OrderSchema }
+      { name: Order.name, schema: OrderSchema },
     ]),
     // @todo: Добавьте раздачу статических файлов из public
     ServeStaticModule.forRoot({
@@ -43,8 +43,8 @@ import { InMemoryOrderRepository } from './repository/order/in-memory-order.repo
   ],
   controllers: [FilmsController, OrderController],
   providers: [
-    configProvider, 
-    FilmsService, 
+    configProvider,
+    FilmsService,
     OrderService,
     {
       provide: 'IFilmsRepository',
@@ -53,7 +53,7 @@ import { InMemoryOrderRepository } from './repository/order/in-memory-order.repo
     {
       provide: 'IOrderRepository',
       useClass: MongoOrderRepository,
-    }
+    },
   ],
 })
 export class AppModule {}

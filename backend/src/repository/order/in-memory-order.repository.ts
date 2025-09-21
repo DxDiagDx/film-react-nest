@@ -6,27 +6,38 @@ import { IOrderRepository } from './order-repository.interface';
 export class InMemoryOrderRepository implements IOrderRepository {
   private orders: CreateOrderDto[] = [];
 
-  async create(orderData: CreateOrderDto, pricePerSeat: number): Promise<{ 
-    success: boolean; message: string; order?: any 
+  async create(
+    orderData: CreateOrderDto,
+    pricePerSeat: number,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    order?: any;
   }> {
     const order = {
       id: Date.now().toString(),
       ...orderData,
       createdAt: new Date(),
-      totalPrice: this.calculateTotalPrice(orderData.seats.length, pricePerSeat),
+      totalPrice: this.calculateTotalPrice(
+        orderData.seats.length,
+        pricePerSeat,
+      ),
       pricePerSeat: pricePerSeat,
-    }
-    
+    };
+
     this.orders.push(order);
 
     return {
       success: true,
       message: 'Фильм успешно забронирован',
-      order
+      order,
     };
   }
 
-  private calculateTotalPrice(seatsCount: number, pricePerSeat: number): number {
+  private calculateTotalPrice(
+    seatsCount: number,
+    pricePerSeat: number,
+  ): number {
     return seatsCount * pricePerSeat;
   }
 

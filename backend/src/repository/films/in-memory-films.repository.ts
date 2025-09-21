@@ -11,22 +11,26 @@ export class InMemoryFilmsRepository implements IFilmsRepository {
   }
 
   async findById(id: string): Promise<FilmDto | null> {
-    return this.films.find(film => film.id === id) || null;
+    return this.films.find((film) => film.id === id) || null;
   }
 
   async findScheduleByFilmId(filmId: string): Promise<FilmDto | null> {
-    return this.films.find(film => film.id === filmId) || null;
+    return this.films.find((film) => film.id === filmId) || null;
   }
 
-  async updateTakenSeats(filmId: string, scheduleId: string, takenSeats: string[]): Promise<void> {
-    const film = this.films.find(f => f.id === filmId);
+  async updateTakenSeats(
+    filmId: string,
+    scheduleId: string,
+    takenSeats: string[],
+  ): Promise<void> {
+    const film = this.films.find((f) => f.id === filmId);
     if (!film) return;
 
-    const schedule = film.schedule.find(s => s.id === scheduleId);
+    const schedule = film.schedule.find((s) => s.id === scheduleId);
     if (!schedule) return;
 
     // Добавляем места в занятые (исключая дубликаты)
-    takenSeats.forEach(seat => {
+    takenSeats.forEach((seat) => {
       if (!schedule.taken.includes(seat)) {
         schedule.taken.push(seat);
       }
