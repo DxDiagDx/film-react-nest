@@ -1,23 +1,25 @@
 //TODO реализовать DTO для /orders
-export class CreateOrderDto {
-  filmId: string;
-  scheduleId: string;
-  seats: string[];
-  userEmail: string;
-  userName: string;
-}
-
-export class OrderItemResponseDto {
-  film: string;
-  session: string;
-  daytime: Date;
+export class TicketDto {
+  film: string; // filmId
+  session: string; // sessionId
+  daytime: string;
   row: number;
   seat: number;
   price: number;
-  id: string;
+}
+
+export class CreateOrderDto {
+  email: string;
+  phone: string;
+  tickets: TicketDto[];
 }
 
 export class OrderResponseDto {
   total: number;
-  items: OrderItemResponseDto[];
+  items: TicketDto[];
+}
+
+export class PlaceDto {
+  row: number;
+  seat: number;
 }

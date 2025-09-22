@@ -1,126 +1,115 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import {
   CreateOrderDto,
-  OrderItemResponseDto,
   OrderResponseDto,
+  PlaceDto,
+  TicketDto,
 } from './dto/order.dto';
-import { IOrderRepository } from './../repository/order/order-repository.interface';
-import { IFilmsRepository } from 'src/repository/films/films-repository.interface';
 
 @Injectable()
 export class OrderService {
-  constructor(
-    @Inject('IOrderRepository')
-    private readonly orderRepository: IOrderRepository,
-    @Inject('IFilmsRepository')
-    private readonly filmsRepository: IFilmsRepository,
-  ) {}
+  constructor(@InjectModel('Film') private readonly filmModel: Model<any>) {}
 
-  async createOrder(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
-    const { filmId, scheduleId, seats } = createOrderDto;
+  async bookTickets(bookDto: CreateOrderDto): Promise<OrderResponseDto> {
+    if (!bookDto.tickets || bookDto.tickets.length === 0) {
+      throw new BadRequestException('Нет билетов для бронирования');
+    }
 
-    // 1. Проверяем существование фильма
-    const film = await this.filmsRepository.findById(filmId);
+    // Берем данные из первого билета (все билеты должны быть на один фильм и сеанс)
+    const firstTicket = bookDto.tickets[0];
+    const filmId = firstTicket.film;
+    const sessionId = firstTicket.session;
+
+    // 1. Найти фильм по filmId
+    const film = await this.filmModel.findOne({ id: filmId }).exec();
     if (!film) {
-      throw new BadRequestException('Фильм не найден');
+      throw new NotFoundException('Фильм не найден');
     }
 
-    // 2. Находим сеанс
-    const schedule = film.schedule.find((s) => s.id === scheduleId);
-    if (!schedule) {
-      throw new BadRequestException('Расписание не найдено');
+    // 2. Найти сеанс по sessionId
+    const session = film.schedule.find((s) => s.id === sessionId);
+    if (!session) {
+      throw new NotFoundException('Сеанс не найден');
     }
 
-    // 3. Получаем цену из сеанса
-    const pricePerSeat = schedule.price;
+    // 3. Преобразуем tickets в places для проверки
+    const places = bookDto.tickets.map((ticket) => ({
+      row: ticket.row,
+      seat: ticket.seat,
+    }));
 
-    // 4. Валидируем формат мест
-    this.validateSeatsFormat(seats);
+    // 4. Проверить доступность мест
+    this.checkAvailability(session, places);
 
-    // 5. Проверяем, что такие места вообще существуют в зале
-    this.validateSeatsExistence(seats, schedule.rows, schedule.seats);
+    // 5. Забронировать места
+    const formattedPlaces = this.formatPlaces(places);
 
-    // 6. Проверяем, что места не заняты
-    const conflictingSeats = this.findConflictingSeats(seats, schedule.taken);
-    if (conflictingSeats.length > 0) {
-      throw new BadRequestException(
-        `Места ${conflictingSeats.join(', ')} уже заняты`,
-      );
-    }
-
-    // 7. Обновляем занятые места в фильме
-    await (this.filmsRepository as any).updateTakenSeats?.(
-      filmId,
-      scheduleId,
-      seats,
+    // 6. Обновить документ в MongoDB
+    await this.filmModel.updateOne(
+      {
+        _id: film._id,
+        'schedule.id': sessionId,
+      },
+      {
+        $push: {
+          'schedule.$.taken': { $each: formattedPlaces },
+        },
+      },
     );
 
-    // 8. Создаем заказ
-    const daytime = schedule.daytime;
-    const orderItems: OrderItemResponseDto[] = seats.map((seat) => {
-      const [row, seatNum] = seat.split(':').map(Number);
+    // 7. Сформировать ответ
+    return this.formatResponse(bookDto.tickets);
+  }
 
-      return {
-        film: filmId,
-        session: scheduleId,
-        daytime: daytime,
-        row: row,
-        seat: seatNum,
-        price: schedule.price,
-        id: `urn:uuid:${uuidv4()}`,
-      };
-    });
-
-    await this.orderRepository.create(createOrderDto, pricePerSeat);
+  private formatResponse(tickets: TicketDto[]): OrderResponseDto {
+    const items = tickets.map((ticket) => ({
+      film: ticket.film,
+      session: ticket.session,
+      daytime: ticket.daytime,
+      row: ticket.row,
+      seat: ticket.seat,
+      price: ticket.price,
+      id: uuidv4(),
+    }));
 
     return {
-      total: orderItems.length,
-      items: orderItems,
+      total: items.length,
+      items,
     };
   }
 
-  private validateSeatsFormat(seats: string[]): void {
-    const invalidSeats = seats.filter((seat) => !/^\d+:\d+$/.test(seat));
-    if (invalidSeats.length > 0) {
-      throw new BadRequestException(
-        `Неверный формат места: ${invalidSeats.join(', ')}. Используйте формат: "row:seat"`,
-      );
+  private checkAvailability(session: any, places: PlaceDto[]): void {
+    for (const place of places) {
+      // Проверка зала
+      if (
+        place.row > session.rows ||
+        place.seat > session.seats ||
+        place.row < 1 ||
+        place.seat < 1
+      ) {
+        throw new BadRequestException(
+          `Место ${place.row}:${place.seat} вне зала`,
+        );
+      }
+
+      // Проверка занятости
+      const placeStr = `${place.row}:${place.seat}`;
+      if (session.taken.includes(placeStr)) {
+        throw new BadRequestException(
+          `Место ${place.row}:${place.seat} уже занято`,
+        );
+      }
     }
   }
 
-  private validateSeatsExistence(
-    seats: string[],
-    maxRows: number,
-    maxSeats: number,
-  ): void {
-    const invalidSeats: string[] = [];
-
-    seats.forEach((seat) => {
-      const [rowStr, seatStr] = seat.split(':');
-      const row = parseInt(rowStr);
-      const seatNum = parseInt(seatStr);
-
-      if (row > maxRows || row < 1) {
-        invalidSeats.push(seat);
-      }
-
-      if (seatNum > maxSeats || seatNum < 1) {
-        invalidSeats.push(seat);
-      }
-
-      if (invalidSeats.length > 0) {
-        throw new BadRequestException(
-          `Такого места не существует: ${invalidSeats.join(', ')}`,
-        );
-      }
-    });
-  }
-
-  private findConflictingSeats(
-    requestedSeats: string[],
-    takenSeats: string[],
-  ): string[] {
-    return requestedSeats.filter((seat) => takenSeats.includes(seat));
+  private formatPlaces(places: PlaceDto[]): string[] {
+    return places.map((place) => `${place.row}:${place.seat}`);
   }
 }

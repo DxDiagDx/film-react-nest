@@ -13,8 +13,6 @@ import { OrderService } from './order/order.service';
 import { Film, FilmSchema } from './films/schemas/film.schema';
 
 import { MongoFilmsRepository } from './repository/films/mongo-films.repository';
-import { MongoOrderRepository } from './repository/order/mongo-order.repository';
-import { Order, OrderSchema } from './order/schemas/order.schema';
 
 @Module({
   imports: [
@@ -28,11 +26,8 @@ import { Order, OrderSchema } from './order/schemas/order.schema';
         uri: process.env.DATABASE_URL || 'mongodb://localhost:27017/afisha',
       }),
     }),
-    // Регистрируем схему фильма
-    MongooseModule.forFeature([
-      { name: Film.name, schema: FilmSchema },
-      { name: Order.name, schema: OrderSchema },
-    ]),
+    // Регистрируем схемы
+    MongooseModule.forFeature([{ name: Film.name, schema: FilmSchema }]),
     // @todo: Добавьте раздачу статических файлов из public
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, '..', 'public'),
@@ -47,10 +42,6 @@ import { Order, OrderSchema } from './order/schemas/order.schema';
     {
       provide: 'IFilmsRepository',
       useClass: MongoFilmsRepository,
-    },
-    {
-      provide: 'IOrderRepository',
-      useClass: MongoOrderRepository,
     },
   ],
 })
