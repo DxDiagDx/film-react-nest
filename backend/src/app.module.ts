@@ -31,7 +31,7 @@ import { MongoFilmsRepository } from './repository/films/mongo-films.repository'
     // @todo: Добавьте раздачу статических файлов из public
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, '..', 'public'),
-      serveRoot: '/',
+      renderPath: '/content/afisha/',
     }),
   ],
   controllers: [FilmsController, OrderController],
