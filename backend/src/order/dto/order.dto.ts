@@ -14,9 +14,19 @@ export class CreateOrderDto {
   tickets: TicketDto[];
 }
 
+export class OrderItemDto {
+  id: string;
+  film: string;
+  session: string;
+  daytime: string;
+  row: number;
+  seat: number;
+  price: number;
+}
+
 export class OrderResponseDto {
   total: number;
-  items: TicketDto[];
+  items: OrderItemDto[];
 }
 
 export class PlaceDto {
