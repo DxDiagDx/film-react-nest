@@ -1,0 +1,84 @@
+services:
+  backend:
+    image: 'ghcr.io/${OWNER}/afisha_backend:latest'
+    build:
+      context: backend
+    environment:
+      PORT: ${PORT}
+      DEBUG: '*'
+      DATABASE_DRIVER: 'postgres'
+      # DATABASE_URL: 'postgres://database:5432/${DATABASE_NAME}'
+      DATABASE_URL: 'postgres://prac:prac@database:5432/${DATABASE_NAME}'
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - 3000:3000
+    networks:
+      - internal
+    depends_on:
+      - database
+
+  frontend:
+    image: 'ghcr.io/${OWNER}/afisha_frontend:latest'
+    build:
+      context: frontend
+    environment:
+      VITE_BASE_URL: /
+      VITE_API_URL: /api/afisha
+      VITE_CDN_URL: /content/afisha
+    volumes:
+      - frontend_build:/app/dist
+
+  server:
+    image: 'ghcr.io/${OWNER}/afisha_server:latest'
+    build:
+      context: nginx
+    ports:
+      - 80:80
+    volumes:
+      - frontend_build:/var/www
+    networks:
+      - internal
+    depends_on:
+      - frontend
+      - backend
+
+  database:
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - '5432:5432'
+    networks:
+      - internal
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4_container
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - internal
+
+volumes:
+  db_data:
+  pgadmin_data:
+  frontend_build:
+
+networks:
+  internal:
+    driver: bridge
