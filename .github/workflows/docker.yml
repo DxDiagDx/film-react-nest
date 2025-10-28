@@ -14,12 +14,12 @@ jobs:
       contents: write
     steps:
       - name: set lower case owner name
-        run: /
+        run: |
           echo "REPO=${OWNER,,}" >>${GITHUB_ENV}
         env:
           OWNER: '${{ github.repository_owner }}'
 
-      - run: /
+      - run: |
           echo "repo ${REPO}"
 
       - name: Checkout repository
@@ -43,18 +43,18 @@ jobs:
         with:
           context: '{{defaultContext}}:backend'
           push: true
-          tags: 'ghcr.io/${{ env.REPO }}/afisha_backend:latest
+          tags: 'ghcr.io/${{ env.REPO }}/afisha_backend:latest'
 
       - name: Build and push frontend
         uses: docker/build-push-action@v6
         with:
           context: '{{defaultContext}}:frontend'
           push: true
-          tags: 'ghcr.io/${{ env.REPO }}/afisha_frontend:latest
+          tags: 'ghcr.io/${{ env.REPO }}/afisha_frontend:latest'
 
       - name: Build and push server
         uses: docker/build-push-action@v6
         with:
           context: '{{defaultContext}}:nginx'
           push: true
-          tags: 'ghcr.io/${{ env.REPO }}/afisha_server:latest
+          tags: 'ghcr.io/${{ env.REPO }}/afisha_server:latest'
