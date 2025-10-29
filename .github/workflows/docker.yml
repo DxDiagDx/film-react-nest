@@ -10,8 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
-      contents: write
+      id-token: write
     steps:
       - name: set lower case owner name
         run: |
