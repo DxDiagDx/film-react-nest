@@ -1,10 +1,10 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { IFilmsRepository } from '../repository/films/films-repository.interface';
 import { v4 as uuidv4 } from 'uuid';
 import {
   CreateOrderDto,
@@ -15,7 +15,10 @@ import {
 
 @Injectable()
 export class OrderService {
-  constructor(@InjectModel('Film') private readonly filmModel: Model<any>) {}
+  constructor(
+    @Inject('IFilmsRepository')
+    private readonly filmsRepository: IFilmsRepository,
+  ) {}
 
   async bookTickets(bookDto: CreateOrderDto): Promise<OrderResponseDto> {
     if (!bookDto.tickets || bookDto.tickets.length === 0) {
@@ -27,8 +30,8 @@ export class OrderService {
     const filmId = firstTicket.film;
     const sessionId = firstTicket.session;
 
-    // 1. Найти фильм по filmId
-    const film = await this.filmModel.findOne({ id: filmId }).exec();
+    // 1. Найти фильм по filmId через репозиторий
+    const film = await this.filmsRepository.findById(filmId);
     if (!film) {
       throw new NotFoundException('Фильм не найден');
     }
@@ -51,17 +54,11 @@ export class OrderService {
     // 5. Забронировать места
     const formattedPlaces = this.formatPlaces(places);
 
-    // 6. Обновить документ в MongoDB
-    await this.filmModel.updateOne(
-      {
-        _id: film._id,
-        'schedule.id': sessionId,
-      },
-      {
-        $push: {
-          'schedule.$.taken': { $each: formattedPlaces },
-        },
-      },
+    // 6. Обновить занятые места в PostgreSQL через репозиторий
+    await this.filmsRepository.updateTakenSeats(
+      filmId,
+      sessionId,
+      formattedPlaces,
     );
 
     // 7. Сформировать ответ
@@ -76,7 +73,7 @@ export class OrderService {
       row: ticket.row,
       seat: ticket.seat,
       price: ticket.price,
-      id: uuidv4(),
+      id: `urn:uuid:${uuidv4()}`,
     }));
 
     return {

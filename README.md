@@ -1,5 +1,7 @@
 # FILM!
 
+Ссылдка на проект [https://lukin-afisha.nomorepartiessbs.ru/]
+
 ## Установка
 
 ### MongoDB

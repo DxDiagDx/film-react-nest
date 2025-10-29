@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as path from 'node:path';
 
 import { configProvider } from './app.config.provider';
@@ -10,9 +9,11 @@ import { OrderController } from './order/order.controller';
 import { FilmsService } from './films/films.service';
 import { OrderService } from './order/order.service';
 
-import { Film, FilmSchema } from './films/schemas/film.schema';
+import { Film } from './films/entities/film.entity';
+import { Schedule } from './films/entities/schedule.entity';
 
-import { MongoFilmsRepository } from './repository/films/mongo-films.repository';
+import { TypeormFilmsRepository } from './repository/films/typeorm-films.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
@@ -20,18 +21,29 @@ import { MongoFilmsRepository } from './repository/films/mongo-films.repository'
       isGlobal: true,
       cache: true,
     }),
-    // Подключаем MongoDB
-    MongooseModule.forRootAsync({
-      useFactory: () => ({
-        uri: process.env.DATABASE_URL || 'mongodb://localhost:27017/afisha',
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get('DATABASE_HOST', 'database'),
+        port: configService.get('DATABASE_PORT', 5432),
+        username: configService.get('DATABASE_USERNAME'),
+        password: configService.get('DATABASE_PASSWORD'),
+        database: configService.get('DATABASE_NAME', 'afisha'),
+        entities: [Film, Schedule],
+        synchronize: false, // ОТКЛЮЧИТЬ чтобы не создавать новые таблицы
+        logging: true,
       }),
+      inject: [ConfigService],
     }),
-    // Регистрируем схемы
-    MongooseModule.forFeature([{ name: Film.name, schema: FilmSchema }]),
-    // @todo: Добавьте раздачу статических файлов из public
+    TypeOrmModule.forFeature([Film, Schedule]),
+    // Раздача статических файлов
     ServeStaticModule.forRoot({
-      rootPath: path.join(__dirname, '..', 'public'),
-      renderPath: '/content/afisha/',
+      rootPath: path.join(__dirname, '..', 'public', 'content', 'afisha'),
+      serveRoot: '/content/afisha/',
+      serveStaticOptions: {
+        index: false,
+      },
     }),
   ],
   controllers: [FilmsController, OrderController],
@@ -41,7 +53,7 @@ import { MongoFilmsRepository } from './repository/films/mongo-films.repository'
     OrderService,
     {
       provide: 'IFilmsRepository',
-      useClass: MongoFilmsRepository,
+      useClass: TypeormFilmsRepository,
     },
   ],
 })
