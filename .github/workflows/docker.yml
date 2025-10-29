@@ -19,7 +19,7 @@ jobs:
 
       - name: Set repository owner
         run: |
-          echo "REPO=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
       - name: Debug repo variable
         run: |
